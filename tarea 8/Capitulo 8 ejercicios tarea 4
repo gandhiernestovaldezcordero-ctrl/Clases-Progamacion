@@ -1,0 +1,151 @@
+#include <stdio.h>
+#include <string.h>
+
+#define MAX_CLIENTES 100
+#define MAX_CADENA 100
+
+typedef struct {
+    char calleNumero[MAX_CADENA];
+    char codigoPostal[20];
+    char colonia[MAX_CADENA];
+    char ciudad[MAX_CADENA];
+} Domicilio;
+
+typedef struct {
+    long long numeroCuenta;
+    char nombre[MAX_CADENA];
+    Domicilio domicilio;
+    char telefono[25];
+    double saldo;
+} Cliente;
+
+int buscarCliente(const Cliente cli[], int n, long long cuenta) {
+    int izquierda = 0;
+    int derecha = n - 1;
+
+    while (izquierda <= derecha) {
+        int medio = izquierda + (derecha - izquierda) / 2;
+
+        if (cli[medio].numeroCuenta == cuenta) {
+            return medio;
+        }
+        if (cli[medio].numeroCuenta < cuenta) {
+            izquierda = medio + 1;
+        } else {
+            derecha = medio - 1;
+        }
+    }
+
+    return -1;
+}
+
+void imprimirCliente(const Cliente *cliente) {
+    printf("\nCliente: %s\n", cliente->nombre);
+    printf("Cuenta: %lld\n", cliente->numeroCuenta);
+    printf("Domicilio: %s, Col. %s, CP %s, %s\n",
+           cliente->domicilio.calleNumero,
+           cliente->domicilio.colonia,
+           cliente->domicilio.codigoPostal,
+           cliente->domicilio.ciudad);
+    printf("Telefono: %s\n", cliente->telefono);
+    printf("Saldo actual: %.2f\n", cliente->saldo);
+}
+
+void depositar(Cliente cli[], int n, long long cuenta, double monto) {
+    int indice;
+
+    if (monto <= 0.0) {
+        printf("El monto del deposito debe ser mayor que cero.\n");
+        return;
+    }
+
+    indice = buscarCliente(cli, n, cuenta);
+    if (indice == -1) {
+        printf("La cuenta %lld no existe.\n", cuenta);
+        return;
+    }
+
+    cli[indice].saldo += monto;
+    printf("Deposito realizado con exito.\n");
+    imprimirCliente(&cli[indice]);
+}
+
+void retirar(Cliente cli[], int n, long long cuenta, double monto) {
+    int indice;
+
+    if (monto <= 0.0) {
+        printf("El monto del retiro debe ser mayor que cero.\n");
+        return;
+    }
+
+    indice = buscarCliente(cli, n, cuenta);
+    if (indice == -1) {
+        printf("La cuenta %lld no existe.\n", cuenta);
+        return;
+    }
+
+    if (cli[indice].saldo < monto) {
+        printf("Saldo insuficiente. No es posible realizar el retiro.\n");
+        imprimirCliente(&cli[indice]);
+        return;
+    }
+
+    cli[indice].saldo -= monto;
+    printf("Retiro realizado con exito.\n");
+    imprimirCliente(&cli[indice]);
+}
+
+int main(void) {
+    Cliente cli[] = {
+        {1001001LL, "Ana Perez", {"Av. Amazonas 123", "170102", "La Carolina", "Quito"}, "0991111111", 1500.00},
+        {1001002LL, "Bruno Lopez", {"Calle Sucre 456", "170401", "Centro Historico", "Quito"}, "0982222222", 2450.75},
+        {1001003LL, "Carla Mena", {"Av. 10 de Agosto 789", "171002", "La Mariscal", "Quito"}, "0973333333", 980.50},
+        {1001004LL, "Diego Ruiz", {"Pasaje Los Alamos 25", "170521", "El Batán", "Quito"}, "0964444444", 5000.00},
+        {1001005LL, "Elena Mora", {"Calle Guayaquil 300", "170136", "San Juan", "Quito"}, "0955555555", 320.40}
+    };
+    const int n = (int)(sizeof(cli) / sizeof(cli[0]));
+    long long cuenta;
+    int opcion;
+    double monto;
+
+    printf("Banco de Quito - Gestion de transacciones\n");
+    printf("Ingrese el numero de cuenta (0 para terminar).\n");
+
+    while (1) {
+        printf("\nNumero de cuenta: ");
+        if (scanf("%lld", &cuenta) != 1) {
+            printf("Entrada invalida.\n");
+            return 1;
+        }
+
+        if (cuenta == 0) {
+            printf("Fin de las transacciones.\n");
+            break;
+        }
+
+        printf("Tipo de transaccion (1 = deposito, 2 = retiro): ");
+        if (scanf("%d", &opcion) != 1) {
+            printf("Entrada invalida.\n");
+            return 1;
+        }
+
+        if (opcion != 1 && opcion != 2) {
+            printf("Opcion no valida.\n");
+            continue;
+        }
+
+        printf("Monto: ");
+        if (scanf("%lf", &monto) != 1) {
+            printf("Entrada invalida.\n");
+            return 1;
+        }
+
+        if (opcion == 1) {
+            depositar(cli, n, cuenta, monto);
+        } else {
+            retirar(cli, n, cuenta, monto);
+        }
+    }
+
+    return 0;
+}
