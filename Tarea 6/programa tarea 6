@@ -1,0 +1,143 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define CAPACIDAD_INICIAL 10
+#define VALOR_MINIMO 0
+#define VALOR_MAXIMO 999
+
+static int comparar_enteros(const void *a, const void *b) {
+    const int *entero_a = (const int *)a;
+    const int *entero_b = (const int *)b;
+
+    return (*entero_a > *entero_b) - (*entero_a < *entero_b);
+}
+
+static int generar_archivo_aleatorio(const char *nombre_archivo, size_t cantidad) {
+    FILE *archivo = fopen(nombre_archivo, "w");
+    size_t i;
+
+    if (archivo == NULL) {
+        printf("No se pudo crear el archivo de numeros aleatorios.\n");
+        return 0;
+    }
+
+    for (i = 0; i < cantidad; i++) {
+        int numero = VALOR_MINIMO + rand() % (VALOR_MAXIMO - VALOR_MINIMO + 1);
+        fprintf(archivo, "%d\n", numero);
+    }
+
+    fclose(archivo);
+    return 1;
+}
+
+static int leer_numeros(const char *nombre_archivo, int **numeros, size_t *cantidad) {
+    FILE *archivo = fopen(nombre_archivo, "r");
+    int *datos = NULL;
+    size_t usados = 0;
+    size_t capacidad = 0;
+    int numero;
+
+    if (archivo == NULL) {
+        printf("No se pudo abrir el archivo para leer los numeros.\n");
+        return 0;
+    }
+
+    while (fscanf(archivo, "%d", &numero) == 1) {
+        if (usados == capacidad) {
+            size_t nueva_capacidad = (capacidad == 0) ? CAPACIDAD_INICIAL : capacidad * 2;
+            int *temporal = (int *)realloc(datos, nueva_capacidad * sizeof(int));
+
+            if (temporal == NULL) {
+                free(datos);
+                fclose(archivo);
+                printf("No hubo memoria suficiente para cargar los numeros.\n");
+                return 0;
+            }
+
+            datos = temporal;
+            capacidad = nueva_capacidad;
+        }
+
+        datos[usados] = numero;
+        usados++;
+    }
+
+    fclose(archivo);
+
+    if (usados == 0) {
+        free(datos);
+        printf("El archivo no contiene numeros para ordenar.\n");
+        return 0;
+    }
+
+    *numeros = datos;
+    *cantidad = usados;
+    return 1;
+}
+
+static int guardar_numeros(const char *nombre_archivo, const int numeros[], size_t cantidad) {
+    FILE *archivo = fopen(nombre_archivo, "w");
+    size_t i;
+
+    if (archivo == NULL) {
+        printf("No se pudo crear el archivo de salida.\n");
+        return 0;
+    }
+
+    for (i = 0; i < cantidad; i++) {
+        fprintf(archivo, "%d\n", numeros[i]);
+    }
+
+    fclose(archivo);
+    return 1;
+}
+
+int main(void) {
+    char archivo_original[256];
+    char archivo_ordenado[256];
+    size_t cantidad;
+    int *numeros = NULL;
+    size_t total_numeros = 0;
+
+    srand((unsigned int)time(NULL));
+
+    printf("Ingrese el nombre del archivo donde se guardaran los numeros aleatorios: ");
+    if (scanf("%255s", archivo_original) != 1) {
+        printf("No fue posible leer el nombre del archivo original.\n");
+        return 1;
+    }
+
+    printf("Ingrese la cantidad de numeros aleatorios que desea generar: ");
+    if (scanf("%zu", &cantidad) != 1 || cantidad == 0) {
+        printf("La cantidad debe ser un numero entero mayor que cero.\n");
+        return 1;
+    }
+
+    printf("Ingrese el nombre del archivo para guardar los numeros ordenados: ");
+    if (scanf("%255s", archivo_ordenado) != 1) {
+        printf("No fue posible leer el nombre del archivo ordenado.\n");
+        return 1;
+    }
+
+    if (!generar_archivo_aleatorio(archivo_original, cantidad)) {
+        return 1;
+    }
+
+    if (!leer_numeros(archivo_original, &numeros, &total_numeros)) {
+        return 1;
+    }
+
+    qsort(numeros, total_numeros, sizeof(int), comparar_enteros);
+
+    if (!guardar_numeros(archivo_ordenado, numeros, total_numeros)) {
+        free(numeros);
+        return 1;
+    }
+
+    printf("Se generaron %zu numeros aleatorios en '%s'.\n", total_numeros, archivo_original);
+    printf("Los numeros se cargaron en memoria dinamica, se ordenaron y se guardaron en '%s'.\n", archivo_ordenado);
+
+    free(numeros);
+    return 0;
+}
